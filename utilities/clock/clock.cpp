@@ -12,18 +12,14 @@ volatile unsigned long miliseconds_passed = 0;
 
  Clock::Clock()
 {
-	cli();
 	OCR0A = OVF_VAL;
 	TIMSK0 |= (1<<OCIE0A);
 	TCCR0A |= (1<WGM01);			
-	sei();
 }
 
 void Clock::start()
 {
-	cli();
 	TCCR0B |= (1<<CS00)|(1<<CS01);
-	sei();
 }
 
 void Clock::stop()
@@ -50,10 +46,5 @@ Clock *clock;
 ISR (TIMER0_COMPA_vect) 
 {
 	miliseconds_passed++;
-	unsigned long current_t = clock->get_ms();
-	if (current_t - read_reg->last_repond_t >= DEFAULT_RESPOND_RATE)
-	{
-		read_reg->last_repond_t = current_t;
-		read_reg->respond_flag = true;
-	}
+	TCNT0 = 0;
 }
