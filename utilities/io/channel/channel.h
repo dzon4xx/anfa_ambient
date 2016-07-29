@@ -14,14 +14,12 @@
 
  class Channel
  {
-	static uint8_t port_letters[NUM_OF_CHANNELS];
-	static uint8_t pin_numbers[NUM_OF_CHANNELS];
 
 	 public:
 
 	 Channel(uint8_t channel_num);
 
-	 Pin *pin;
+	 IO_pin *pin;
 
 	 uint8_t get_num();
 
