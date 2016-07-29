@@ -11,57 +11,88 @@
 
 #include <stdint.h>
 
+enum pin_mode
+{
+	OUTPUT,
+	INPUT,	
+};
+
+
 class Pin
 {
-	public:
-	Pin(uint8_t port_letter, uint8_t pin_num);
+public:
 
 	//zwraca litere portu
-	uint8_t get_port_letter();
+	uint8_t get_port_letter() {	return port_letter;}
 
 	//zwraca maske pinu. 
-	uint8_t get_pin_mask();
-
-	uint8_t get_channel_num();
-
-	volatile uint8_t* get_dir_port();
-
-	volatile uint8_t* get_in_port();
-
-	volatile uint8_t* get_out_port();
-
-	void set_input();
-
-	void set_output();
-
-	//Ustawia pin w stan wysoki
-	void high();
-
-	//Ustawia pin w stan wysoki
-	void low();
-
-	//Zwraca stan pinu
-	bool read();
-
-
-
-private:
-
-	//Rejestr wyjsciowy PORTX
-	volatile uint8_t *out_port;
-
-	//Rejestr wejœciowy PINX
-	volatile uint8_t *in_port;
-
-	//Rejestr kierunku DDRX
-	volatile uint8_t *dir_port;
+	uint8_t get_pin_mask(){	return pin_mask; }
 
 	//Maska pinu
 	uint8_t pin_mask;
 
 	uint8_t port_letter;
+	
+protected:
+
+
 
 };
 
+class Out_pin : virtual public Pin
+{
+public:
 
-#endif /* PIN_H_ */
+	Out_pin(){};
+
+	Out_pin(uint8_t port_letter, uint8_t pin_num);
+	
+	//Zwraca port wyjsciowy
+	volatile uint8_t* get_out_port(){ return out_port; }
+
+	//Ustawia pin w stan wysoki
+	inline void on(){ *(out_port) |= pin_mask; }
+
+	//Ustawia pin w stan niski
+	inline void off(){ *(out_port) &= ~pin_mask; }
+		
+	inline void toggle() {*(out_port) ^= pin_mask;}
+		
+	inline bool get_state() {return *out_port & pin_mask;}
+		 
+protected:
+	
+	//Rejestr wyjsciowy PORTX
+	volatile uint8_t *out_port;
+
+};
+
+class In_pin : virtual public Pin
+{
+
+public:
+	In_pin(){};
+	In_pin(uint8_t port_letter, uint8_t pin_num, bool pull_up);
+
+	volatile uint8_t* get_in_port(){return in_port;}
+
+	inline bool read_state() {return *in_port & pin_mask;} 
+
+protected:
+
+	volatile uint8_t *in_port;
+	volatile uint8_t *dir_port;
+
+};
+
+class IO_pin : public In_pin, public Out_pin
+{
+	public:
+	IO_pin(uint8_t port_letter, uint8_t pin_num, pin_mode mode = INPUT);
+	
+	void set_mode(pin_mode mode);
+	private:
+	
+};
+
+#endif
