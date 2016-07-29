@@ -7,10 +7,9 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-OneWire::OneWire(Pin *pin)
+OneWire::OneWire(IO_pin *pin)
 {
 	this->pin = pin;
-	pin->set_input();
 	bitmask = pin->get_pin_mask();
 	baseReg = pin->get_in_port();
 #if ONEWIRE_SEARCH

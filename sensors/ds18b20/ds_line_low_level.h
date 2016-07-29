@@ -17,7 +17,7 @@ class Ds_line_low_level	: public OneWire
 {
 // functions
 public:
-	Ds_line_low_level(Pin *pin);
+	Ds_line_low_level(IO_pin *pin);
 	
 	//Prosba o rozpoczecie konwersji
 	void request();

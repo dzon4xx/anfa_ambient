@@ -43,7 +43,7 @@
 #define TEMP_11_BIT 0x5F // 11 bit
 #define TEMP_12_BIT 0x7F // 12 bit
 
-Ds_line_low_level::Ds_line_low_level(Pin *pin): OneWire(pin)
+Ds_line_low_level::Ds_line_low_level(IO_pin *pin): OneWire(pin)
 {} 
 
 void Ds_line_low_level::request()
