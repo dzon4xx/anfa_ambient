@@ -9,26 +9,26 @@
  */
 
 
- #include "../utilities/io/pin/pin.h"
- #include "../settings.h"
+#include "../utilities/io/pin/pin.h"
 #include <stdint.h>
 #include <avr/io.h>
 
-#define MAX_FIXED_BYES_IN_REQUEST 9
+#define MAX_FIXED_BYTES_IN_REQUEST 9
 #define MAX_REGISTERS 64
 
- #define DEFAULT_MODBUS_ADDRESS 20
- #define DEFAULT_BAUDE_RATE 57600
+#define DEFAULT_MODBUS_ADDRESS 4	// Adres modbus urzadzenia
+#define BAUDRATE 250000
 
+#define WRITE_REGS_RESPONSE_SIZE 8
 
 //Transmision buffer size
-#define BUFFER_SIZE 2*MAX_REGISTERS+MAX_FIXED_BYES_IN_REQUEST//maks 256 bajtow do komunikacji
+#define BUFFER_SIZE 2*MAX_REGISTERS+MAX_FIXED_BYTES_IN_REQUEST//maks 256 bajtow do komunikacji
 
 class Frame
 {
 public:
 
-	Frame(uint8_t port_letter, uint8_t pin_number);
+	Frame();
 
 	//Czyta przychodzace bajty. sprawdza czy przyszla nowa ramka
 	uint8_t read_byte();
@@ -36,8 +36,9 @@ public:
 	//Sprawdza dlugosc przychodzacej ramki
 	int16_t check_length(uint8_t in_byte);
 
-	//Wyslij ramke poprzez modbus
-	void send(unsigned char bufferSize);
+	void listen_mode();
+	
+	void send_mode(uint8_t response_frame_size);
 
 	// Odpowiedz bledu.
 	void exception_response(uint8_t function, uint8_t exception);
@@ -45,55 +46,55 @@ public:
 	//Wyliczanie sumy kontrolnej
 	uint16_t calculate_CRC(uint8_t size);
 
+	void set_address(uint8_t address);
+
 public:
 
 	//Adres sluzacy do komunikacji modbus
 	uint8_t address = DEFAULT_MODBUS_ADDRESS;
 
 	//Predkosc transmisji
-	unsigned long baude_rate = DEFAULT_BAUDE_RATE;
+	unsigned long baude_rate = BAUDRATE;
 
 	//Licznik przychodzacych bajtow
-	uint8_t in_bytes_counter = 0;
+	volatile uint8_t in_bytes_counter = 0;
 
 	//Flaga mowiaca czy przyszla nowa ramka danych.
-	bool is_new = false;
+	volatile bool is_new = false;
 
 	//Dlugosc przychodzacej ramki
-	uint16_t length = -1;
+	volatile uint16_t length = 65535;
 
 	//Bufor sluzacy do odczytywania i wysylania danych przez UART
 	uint8_t data[BUFFER_SIZE] = {0};
+				
+	volatile uint8_t send_data_pointer = 0;
+	
+	volatile uint8_t send_data_size = 0;
+
+	volatile uint8_t *uart_port = &UDR0;
+
 
 private:
 
 	//Konfiguracja komunikacji szeregowej
-	void set_UART();
-
-	void listen_mode();
-
-	void send_mode();
-
+	void init_UART();
+	
 	//Wylicz czasy opoznien do T1_5 oraz T3_5
 	void calculate_time_outs(uint32_t baude_rate);
 
-	unsigned int T1_5 = 750; // inter character time out
-
-	unsigned int T3_5 = 1750; // frame delay
-
 private:
 
-	Pin *pin;
-	
+	Out_pin *pin;
+
+	Out_pin *led;
+				
 	long last_byte_arrival_t = 0;
 
-	#ifdef ATMEGA32U4
-	volatile uint8_t *udr_port = &UDR1;
-	#endif
+	uint8_t T3_5_ms = 1; // frame delay in ms
 
-	#ifdef ATMEGA328
-	volatile uint8_t *udr_port = &UDR0;
-	#endif
+	unsigned int T3_5_us = 1000; // frame delay in us
+	
 };
 
 class Modbus_base
@@ -101,34 +102,59 @@ class Modbus_base
 	public:
 
 	//Rejestry modbusowe
-	volatile uint16_t regs[MAX_REGISTERS] = {0};
+	uint16_t regs[MAX_REGISTERS] = {0};
+};
+
+class Modbus_write : public Modbus_base
+{
+public:
+
+	void populate_regs_with_frame(uint8_t frame[], uint8_t no_of_registers);
+
+	//Nowy pakiet czekajacy na osbluzenie
+	volatile bool new_packet_pending = false;
+};
+
+class Modbus_write_reg : public Modbus_write
+{
+public:
+	Modbus_write_reg();
+
+	//Zapisuje rejestry modbus
+	void write_holding_regs();
+
+private:
 };
 
 class Modbus_read : public Modbus_base
 {
-public:
+	public:
 	void populate_frame_with_regs(uint8_t no_of_registers);
 
-	volatile bool respond_flag = true;
+	bool respond_flag = false;
 
 	volatile unsigned long last_repond_t = 0;
 
-protected:
+	protected:
 	uint16_t starting_reg;
 	uint16_t max_reg;
 };
 
 class Modbus_read_reg : public Modbus_read
 {
-public:
+	public:
 	Modbus_read_reg();
 
 	//Odczytuje rejestry modbus
 	void read_holding_regs();
-private:
+	private:
 };
 
+
 extern Frame *frame;
+
+extern Modbus_write_reg *write_reg;
+
 extern Modbus_read_reg *read_reg;
 
 

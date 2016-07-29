@@ -31,7 +31,7 @@ void populate_regs();
 int main(void)
 {
 	cli();
-	frame		= new Frame('c', 2);
+	frame		= new Frame;
 	read_reg	= new Modbus_read_reg;
 	clock		= new Clock;
 	clock->start();
